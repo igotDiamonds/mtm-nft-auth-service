@@ -18,15 +18,8 @@ export class AuthenticateGateway implements OnGatewayConnection {
     private authenticateService: AuthenticateService,
     private userSessionService: UserSessionService,
   ) {
-    // authenticateService.onWalletConnectCallback = this.handleWalletConnect;
+    authenticateService.setOnWalletConnectCallback = this.handleWalletConnect;
   }
-
-  // 1. Пользователь без кук делает запрос на подключение к сокету
-  // 2. Пользователь получает сообщение pleaseAuth, требование авторизации и диплинк WalletConnect
-  // 3. Пользователь сканирует QR-код, дает согласие, WalletConnect стреляет 'connect' евент
-  // 4. Создается сессия, пользователю проставляется кука
-  // 5. В дальнейшем при подключении с этого устройства будет воскрешаться сессия пользователя
-  // 6. ???
 
   @WebSocketServer()
   server: Server;
@@ -47,8 +40,6 @@ export class AuthenticateGateway implements OnGatewayConnection {
 
   @SubscribeMessage('requestURL')
   handleRequestURL(): string {
-    this.authenticateService.setOnWalletConnectCallback =
-      this.handleWalletConnect;
     const url = this.authenticateService.getLoginURL();
     console.log('Getting wallet deeplink... ', url);
     return url;
