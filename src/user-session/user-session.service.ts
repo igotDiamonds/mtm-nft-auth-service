@@ -18,6 +18,7 @@ export class UserSessionService {
 
     return createdUserSession.save();
   }
+
   async deleteSession(token: string) {
     return this.userSessionModel.findOneAndRemove({ sessionId: token }).exec();
   }

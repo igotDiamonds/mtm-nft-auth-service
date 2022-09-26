@@ -11,6 +11,10 @@ export class AuthorizationController {
     const token = req.cookies['auth-token'];
     if (!token) throw new UnauthorizedException();
     const wallet = await this.userSessionService.getWalletOf(token);
-    return alchemy.nft.getNftsForOwner(wallet);
+    return {
+      ownsNFT: await alchemy.nft.checkNftOwnership(wallet, [
+        '0x89de3d3cbceb94734393cc857886aad4da6bc111',
+      ]),
+    };
   }
 }

@@ -5,10 +5,10 @@ export type UserSessionDocument = UserSession & Document;
 
 @Schema()
 export class UserSession {
-  @Prop()
+  @Prop({ unique: true, required: true })
   sessionId: string;
 
-  @Prop()
+  @Prop({ required: true })
   sessionJSON: string;
 
   @Prop()
