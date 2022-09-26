@@ -12,6 +12,9 @@ export class UserSession {
   sessionJSON: string;
 
   @Prop()
+  wallet: string;
+
+  @Prop()
   expires?: number;
 }
 

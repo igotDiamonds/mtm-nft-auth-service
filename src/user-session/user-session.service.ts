@@ -15,7 +15,19 @@ export class UserSessionService {
 
   async createSession(userSession: UserSession) {
     const createdUserSession = new this.userSessionModel(userSession);
+
     return createdUserSession.save();
+  }
+  async deleteSession(token: string) {
+    return this.userSessionModel.findOneAndRemove({ sessionId: token }).exec();
+  }
+
+  async getWalletOf(token: string) {
+    const session = await this.userSessionModel
+      .findOne({ sessionId: token })
+      .exec();
+
+    return session?.wallet;
   }
 
   async getSession(sessionId: string) {
