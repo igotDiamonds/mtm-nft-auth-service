@@ -14,15 +14,6 @@ export class WalletConnectService {
 
   private sessions: Map<string, WalletConnect> = new Map();
 
-  setEvents(token: string) {
-    const wcSession = this.sessions.get(token);
-    if (!wcSession) return console.log('No Session', this.sessions);
-
-    console.log(wcSession);
-
-    this.handleEvents(wcSession);
-  }
-
   async restoreConnection(token: string) {
     const userSession = await this.userSessionService.getSession(token);
 
@@ -148,15 +139,5 @@ export class WalletConnectService {
     this.handleEvents(initedConnection);
 
     return initedConnection;
-  }
-
-  async getDeeplink(sessionId?: string) {
-    const session = sessionId
-      ? await this.userSessionService
-          .getSession(sessionId)
-          .then((userSession) => JSON.parse(userSession.sessionJSON))
-      : this.createConnection();
-
-    return session.uri;
   }
 }
