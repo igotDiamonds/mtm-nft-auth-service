@@ -1,17 +1,21 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-
-import { AuthenticateModule } from './authenticate.module';
+import { ConfigModule } from '@nestjs/config';
+import { WalletConnectModule } from './walletconnect/walletconnect.module';
+import { AuthenticateModule } from './authentication/authenticate.module';
 import { UserSessionModule } from './user-session/user-session.module';
+import { AuthorizationController } from './authorization/authorization.controller';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ envFilePath: `.env.${process.env.NODE_ENV}` }),
+    MongooseModule.forRoot(
+      `mongodb+srv://${process.env.DATABASE_USER}:${process.env.DATABASE_PASSWORD}@${process.env.DATABASE_HOST}/?retryWrites=true&w=majority`,
+    ),
     UserSessionModule,
     AuthenticateModule,
-    MongooseModule.forRoot(
-      'mongodb+srv://mtmadmin:BS33eYIYbyb8GaKY@mtm.q1hphfi.mongodb.net/?retryWrites=true&w=majority',
-      // 'mongodb+srv://mtmadmin:BS33eYIYbyb8GaKY@mtm.q1hphfi.mongodb.net/?retryWrites=true&w=majority',
-    ),
+    WalletConnectModule,
   ],
+  controllers: [AuthorizationController],
 })
 export class AppModule {}
