@@ -14,15 +14,6 @@ export class WalletConnectService {
 
   private sessions: Map<string, WalletConnect> = new Map();
 
-  setEvents(token: string) {
-    const wcSession = this.sessions.get(token);
-    if (!wcSession) return console.log('No Session', this.sessions);
-
-    console.log(wcSession);
-
-    this.handleEvents(wcSession);
-  }
-
   async restoreConnection(token: string) {
     const userSession = await this.userSessionService.getSession(token);
 
@@ -32,7 +23,6 @@ export class WalletConnectService {
       );
 
     const prevWcConnection = this.sessions.get(userSession.sessionId);
-    console.log('Prev connection -', prevWcConnection);
 
     if (prevWcConnection) {
       prevWcConnection.off('connect');
@@ -78,26 +68,23 @@ export class WalletConnectService {
       const { accounts } = payload.params[0];
       const wallet = accounts[0];
 
-      this.userSessionService
-        .createSession({
+      try {
+        await this.userSessionService.createSession({
           sessionId: wcConnection.handshakeTopic,
           sessionJSON: wcSessionJSON,
           wallet,
-        })
-        .then((userSession) =>
-          this.websocketGateway.server.emit('wc-connected', {
-            ...payload.params[0],
-            wcSessionJSON,
-          }),
-        )
-        .catch((createUserSessionError) => {
-          throw new Error(
-            'Something went wrong on session creation' +
-              JSON.stringify(createUserSessionError),
-          );
         });
 
-      console.log(`WalletConnect connected ${wcConnection.handshakeTopic}`);
+        this.websocketGateway.server.emit('wc-connected', {
+          ...payload.params[0],
+          wcSessionJSON,
+        });
+
+        console.log('WalletConnect, wallet connected successfully');
+      } catch (error) {
+        console.log('WalletConnect Connect Event Error: ', error);
+      } finally {
+      }
     });
 
     wcConnection.on('session_update', (error, payload) => {
@@ -148,15 +135,5 @@ export class WalletConnectService {
     this.handleEvents(initedConnection);
 
     return initedConnection;
-  }
-
-  async getDeeplink(sessionId?: string) {
-    const session = sessionId
-      ? await this.userSessionService
-          .getSession(sessionId)
-          .then((userSession) => JSON.parse(userSession.sessionJSON))
-      : this.createConnection();
-
-    return session.uri;
   }
 }

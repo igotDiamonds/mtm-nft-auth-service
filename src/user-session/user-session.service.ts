@@ -1,4 +1,4 @@
-import { Model } from 'mongoose';
+import { Model, MongooseError } from 'mongoose';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import {
@@ -14,9 +14,21 @@ export class UserSessionService {
   ) {}
 
   async createSession(userSession: UserSession) {
+    if (this.userSessionModel.exists({ sessionId: userSession.sessionId }))
+      return userSession;
     const createdUserSession = new this.userSessionModel(userSession);
 
-    return createdUserSession.save();
+    try {
+      return createdUserSession.save();
+    } catch (error) {
+      if (error.code === 11000) {
+        return createdUserSession.update();
+      } else {
+        throw new MongooseError(
+          'Failed to save or update UserSession, stack: ' + error,
+        );
+      }
+    }
   }
 
   async deleteSession(token: string) {
