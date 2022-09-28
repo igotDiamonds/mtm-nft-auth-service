@@ -14,6 +14,26 @@ export class WalletConnectService {
 
   private sessions: Map<string, WalletConnect> = new Map();
 
+  async createConnection() {
+    const wcConnection = new WalletConnect({
+      bridge: 'https://bridge.walletconnect.org', // Required
+      qrcodeModal: QRCodeModal,
+      clientMeta: {
+        description: 'Server side auth',
+        url: 'https://mtmart.io',
+        name: 'MTM Auth',
+        icons: [],
+      },
+    });
+
+    const initedConnection = await this.initWCConnection(wcConnection);
+    this.sessions.set(initedConnection.handshakeTopic, initedConnection);
+
+    this.handleEvents(initedConnection);
+
+    return initedConnection;
+  }
+
   async restoreConnection(token: string) {
     const userSession = await this.userSessionService.getSession(token);
 
@@ -44,21 +64,13 @@ export class WalletConnectService {
     });
 
     // const initedConnection = await this.initWCConnection(wcConnection);
-    const initedConnection = wcConnection;
-    this.handleEvents(initedConnection);
-    this.sessions.set(userSession.sessionId, initedConnection);
-
-    return initedConnection;
-  }
-
-  private initWCConnection = async (wcConnection: WalletConnect) => {
-    if (!wcConnection.connected)
-      await wcConnection
-        .createSession()
-        .catch((e) => console.log('WalletConnet createSession error: \n', e));
+    console.log('isConnectedOnRestore?:', wcConnection.connected);
+    wcConnection.createSession();
+    this.handleEvents(wcConnection);
+    this.sessions.set(userSession.sessionId, wcConnection);
 
     return wcConnection;
-  };
+  }
 
   private handleEvents = async (wcConnection: WalletConnect) => {
     const wcSessionJSON = await JSON.stringify(wcConnection.session);
@@ -69,16 +81,20 @@ export class WalletConnectService {
       const wallet = accounts[0];
 
       try {
+        console.log('Topic - ', wcConnection.handshakeTopic);
+
         await this.userSessionService.createSession({
           sessionId: wcConnection.handshakeTopic,
           sessionJSON: wcSessionJSON,
           wallet,
         });
 
-        this.websocketGateway.server.emit('wc-connected', {
-          ...payload.params[0],
-          wcSessionJSON,
-        });
+        this.websocketGateway.server
+          .to(wcConnection.handshakeTopic)
+          .emit('wc-connected', {
+            ...payload.params[0],
+            wcSessionJSON,
+          });
 
         console.log('WalletConnect, wallet connected successfully');
       } catch (error) {
@@ -94,10 +110,12 @@ export class WalletConnectService {
 
       // Get updated accounts and chainId
       const { accounts, chainId } = payload.params[0];
-      this.websocketGateway.server.emit('wc-session-update', {
-        ...payload.params[0],
-        wcSessionJSON,
-      }),
+      this.websocketGateway.server
+        .to(wcConnection.handshakeTopic)
+        .emit('wc-session-update', {
+          ...payload.params[0],
+          wcSessionJSON,
+        }),
         console.log('WalletConnect - session updated', accounts, chainId);
     });
 
@@ -117,23 +135,12 @@ export class WalletConnectService {
     });
   };
 
-  async createConnection() {
-    const wcConnection = new WalletConnect({
-      bridge: 'https://bridge.walletconnect.org', // Required
-      qrcodeModal: QRCodeModal,
-      clientMeta: {
-        description: 'Server side auth',
-        url: 'https://mtmart.io',
-        name: 'MTM Auth',
-        icons: [],
-      },
-    });
+  private initWCConnection = async (wcConnection: WalletConnect) => {
+    if (!wcConnection.connected)
+      await wcConnection
+        .createSession()
+        .catch((e) => console.log('WalletConnet createSession error: \n', e));
 
-    const initedConnection = await this.initWCConnection(wcConnection);
-    this.sessions.set(initedConnection.handshakeTopic, initedConnection);
-
-    this.handleEvents(initedConnection);
-
-    return initedConnection;
-  }
+    return wcConnection;
+  };
 }
