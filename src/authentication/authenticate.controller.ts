@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  HttpStatus,
-  Request,
-  Res,
-  UnauthorizedException,
-  UseGuards,
-} from '@nestjs/common';
-import { Response } from 'express';
-import { UserSessionService } from 'src/user-session/user-session.service';
+import { Controller, Get, Request, UseGuards } from '@nestjs/common';
 import { WalletConnectService } from 'src/walletconnect/walletconnect.service';
 import { AuthenticateService } from './authenticate.service';
 import { JwtAuthGuard } from './jwt.guard';
@@ -17,7 +7,6 @@ import { JwtAuthGuard } from './jwt.guard';
 export class AuthenticateController {
   constructor(
     private walletConnectService: WalletConnectService,
-    private userSessionService: UserSessionService,
     private authenticateService: AuthenticateService,
   ) {}
 
@@ -32,20 +21,13 @@ export class AuthenticateController {
 
   @UseGuards(JwtAuthGuard)
   @Get('request-session')
-  async requestSession(@Request() req, @Res() res: Response) {
-    try {
-      const token = req.user.uri;
-      console.log(token);
+  async requestSession(@Request() req) {
+    const token = req.user.uri;
 
-      await this.walletConnectService.restoreConnection(token);
+    const wcConnection = await this.walletConnectService.restoreConnection(
+      token,
+    );
 
-      res.status(HttpStatus.NO_CONTENT);
-    } catch (error) {
-      console.log(error);
-
-      res.status(HttpStatus.UNAUTHORIZED);
-    } finally {
-      res.send();
-    }
+    return { uri: wcConnection.uri, session: wcConnection.session };
   }
 }
