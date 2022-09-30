@@ -14,15 +14,37 @@ export class WalletConnectService {
 
   private sessions: Map<string, WalletConnect> = new Map();
 
-  async restoreConnection(token: string) {
-    const userSession = await this.userSessionService.getSession(token);
+  async createConnection() {
+    const wcConnection = new WalletConnect({
+      bridge: 'https://bridge.walletconnect.org', // Required
+      qrcodeModal: QRCodeModal,
+      clientMeta: {
+        description: 'Server side auth',
+        url: 'https://mtmart.io',
+        name: 'MTM Auth',
+        icons: [],
+      },
+    });
+
+    const initedConnection = await this.initWCConnection(wcConnection);
+
+    this.handleEvents(initedConnection);
+
+    return initedConnection;
+  }
+
+  async restoreConnection(sessionURI: string) {
+    const userSession = await this.userSessionService.getSession(sessionURI);
 
     if (userSession === null || undefined)
       throw new Error(
-        "UserSessionService can't find session with token " + token,
+        "\nUserSessionService can't find session with URI: " +
+          sessionURI +
+          '\n',
       );
 
-    const prevWcConnection = this.sessions.get(userSession.sessionId);
+    const prevSession = await JSON.parse(userSession.sessionJSON);
+    const prevWcConnection = this.sessions.get(prevSession.uri);
 
     if (prevWcConnection) {
       prevWcConnection.off('connect');
@@ -43,39 +65,30 @@ export class WalletConnectService {
       },
     });
 
-    // const initedConnection = await this.initWCConnection(wcConnection);
-    const initedConnection = wcConnection;
-    this.handleEvents(initedConnection);
-    this.sessions.set(userSession.sessionId, initedConnection);
-
-    return initedConnection;
-  }
-
-  private initWCConnection = async (wcConnection: WalletConnect) => {
-    if (!wcConnection.connected)
-      await wcConnection
-        .createSession()
-        .catch((e) => console.log('WalletConnet createSession error: \n', e));
+    this.handleEvents(wcConnection);
 
     return wcConnection;
-  };
+  }
 
   private handleEvents = async (wcConnection: WalletConnect) => {
     const wcSessionJSON = await JSON.stringify(wcConnection.session);
+    const socketConnection = this.websocketGateway.server.to(wcConnection.uri);
 
     wcConnection.on('connect', async (error, payload) => {
       if (error) throw new Error('WalletConnect failed to connect');
       const { accounts } = payload.params[0];
-      const wallet = accounts[0];
+      const walletAddress = accounts[0];
 
       try {
         await this.userSessionService.createSession({
-          sessionId: wcConnection.handshakeTopic,
+          sessionId: wcConnection.uri,
           sessionJSON: wcSessionJSON,
-          wallet,
+          wallet: walletAddress,
         });
 
-        this.websocketGateway.server.emit('wc-connected', {
+        this.sessions.set(walletAddress, wcConnection);
+
+        socketConnection.emit('wc-connected', {
           ...payload.params[0],
           wcSessionJSON,
         });
@@ -91,49 +104,35 @@ export class WalletConnectService {
       if (error) {
         throw error;
       }
-
-      // Get updated accounts and chainId
       const { accounts, chainId } = payload.params[0];
-      this.websocketGateway.server.emit('wc-session-update', {
+
+      socketConnection.emit('wc-session-update', {
         ...payload.params[0],
         wcSessionJSON,
-      }),
-        console.log('WalletConnect - session updated', accounts, chainId);
+      });
+
+      console.log('WalletConnect - session updated', accounts, chainId);
     });
 
     wcConnection.on('disconnect', (error, payload) => {
       if (error) throw error;
 
-      if (this.sessions.delete(wcConnection.handshakeTopic)) {
-        console.log(
-          'WalletConnect session disconnect: ',
-          wcConnection.handshakeTopic,
-        );
+      if (this.sessions.delete(wcConnection.uri)) {
+        console.log('WalletConnect session disconnect: ', wcConnection.uri);
       } else {
         console.log(
-          `WalletConnect session - ${wcConnection.handshakeTopic} doesn't exsits in app`,
+          `WalletConnect session - ${wcConnection.uri} doesn't exsits in app`,
         );
       }
     });
   };
 
-  async createConnection() {
-    const wcConnection = new WalletConnect({
-      bridge: 'https://bridge.walletconnect.org', // Required
-      qrcodeModal: QRCodeModal,
-      clientMeta: {
-        description: 'Server side auth',
-        url: 'https://mtmart.io',
-        name: 'MTM Auth',
-        icons: [],
-      },
-    });
+  private initWCConnection = async (wcConnection: WalletConnect) => {
+    if (!wcConnection.connected)
+      await wcConnection
+        .createSession()
+        .catch((e) => console.log('WalletConnet createSession error: \n', e));
 
-    const initedConnection = await this.initWCConnection(wcConnection);
-    this.sessions.set(initedConnection.handshakeTopic, initedConnection);
-
-    this.handleEvents(initedConnection);
-
-    return initedConnection;
-  }
+    return wcConnection;
+  };
 }

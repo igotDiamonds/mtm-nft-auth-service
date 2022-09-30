@@ -14,21 +14,15 @@ export class UserSessionService {
   ) {}
 
   async createSession(userSession: UserSession) {
-    if (this.userSessionModel.exists({ sessionId: userSession.sessionId }))
+    if (
+      await this.userSessionModel
+        .exists({ sessionId: userSession.sessionId })
+        .exec()
+    )
       return userSession;
     const createdUserSession = new this.userSessionModel(userSession);
 
-    try {
-      return createdUserSession.save();
-    } catch (error) {
-      if (error.code === 11000) {
-        return createdUserSession.update();
-      } else {
-        throw new MongooseError(
-          'Failed to save or update UserSession, stack: ' + error,
-        );
-      }
-    }
+    return createdUserSession.save();
   }
 
   async deleteSession(token: string) {

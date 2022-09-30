@@ -1,11 +1,25 @@
 import {
+  OnGatewayInit,
   WebSocketGateway as WSGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 
 @WSGateway({ cors: true })
-export class WebSocketGateway {
+export class WebSocketGateway implements OnGatewayInit {
   @WebSocketServer()
   server: Server;
+
+  afterInit(server: Server) {
+    server.on('connection', (socket) => {
+      const token = socket.handshake.auth.token;
+      console.log('Socket connection with token: ', token);
+
+      if (!token) {
+        throw new Error('Token not providen');
+      }
+
+      socket.join(token);
+    });
+  }
 }
