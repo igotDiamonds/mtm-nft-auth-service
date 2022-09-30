@@ -27,22 +27,24 @@ export class WalletConnectService {
     });
 
     const initedConnection = await this.initWCConnection(wcConnection);
-    this.sessions.set(initedConnection.handshakeTopic, initedConnection);
 
     this.handleEvents(initedConnection);
 
     return initedConnection;
   }
 
-  async restoreConnection(token: string) {
-    const userSession = await this.userSessionService.getSession(token);
+  async restoreConnection(sessionURI: string) {
+    const userSession = await this.userSessionService.getSession(sessionURI);
 
     if (userSession === null || undefined)
       throw new Error(
-        "UserSessionService can't find session with token " + token,
+        "\nUserSessionService can't find session with URI: " +
+          sessionURI +
+          '\n',
       );
 
-    const prevWcConnection = this.sessions.get(userSession.sessionId);
+    const prevSession = await JSON.parse(userSession.sessionJSON);
+    const prevWcConnection = this.sessions.get(prevSession.uri);
 
     if (prevWcConnection) {
       prevWcConnection.off('connect');
@@ -63,38 +65,33 @@ export class WalletConnectService {
       },
     });
 
-    // const initedConnection = await this.initWCConnection(wcConnection);
-    console.log('isConnectedOnRestore?:', wcConnection.connected);
-    wcConnection.createSession();
     this.handleEvents(wcConnection);
-    this.sessions.set(userSession.sessionId, wcConnection);
 
     return wcConnection;
   }
 
   private handleEvents = async (wcConnection: WalletConnect) => {
     const wcSessionJSON = await JSON.stringify(wcConnection.session);
+    const socketConnection = this.websocketGateway.server.to(wcConnection.uri);
 
     wcConnection.on('connect', async (error, payload) => {
       if (error) throw new Error('WalletConnect failed to connect');
       const { accounts } = payload.params[0];
-      const wallet = accounts[0];
+      const walletAddress = accounts[0];
 
       try {
-        console.log('Topic - ', wcConnection.handshakeTopic);
-
         await this.userSessionService.createSession({
-          sessionId: wcConnection.handshakeTopic,
+          sessionId: wcConnection.uri,
           sessionJSON: wcSessionJSON,
-          wallet,
+          wallet: walletAddress,
         });
 
-        this.websocketGateway.server
-          .to(wcConnection.handshakeTopic)
-          .emit('wc-connected', {
-            ...payload.params[0],
-            wcSessionJSON,
-          });
+        this.sessions.set(walletAddress, wcConnection);
+
+        socketConnection.emit('wc-connected', {
+          ...payload.params[0],
+          wcSessionJSON,
+        });
 
         console.log('WalletConnect, wallet connected successfully');
       } catch (error) {
@@ -107,29 +104,24 @@ export class WalletConnectService {
       if (error) {
         throw error;
       }
-
-      // Get updated accounts and chainId
       const { accounts, chainId } = payload.params[0];
-      this.websocketGateway.server
-        .to(wcConnection.handshakeTopic)
-        .emit('wc-session-update', {
-          ...payload.params[0],
-          wcSessionJSON,
-        }),
-        console.log('WalletConnect - session updated', accounts, chainId);
+
+      socketConnection.emit('wc-session-update', {
+        ...payload.params[0],
+        wcSessionJSON,
+      });
+
+      console.log('WalletConnect - session updated', accounts, chainId);
     });
 
     wcConnection.on('disconnect', (error, payload) => {
       if (error) throw error;
 
-      if (this.sessions.delete(wcConnection.handshakeTopic)) {
-        console.log(
-          'WalletConnect session disconnect: ',
-          wcConnection.handshakeTopic,
-        );
+      if (this.sessions.delete(wcConnection.uri)) {
+        console.log('WalletConnect session disconnect: ', wcConnection.uri);
       } else {
         console.log(
-          `WalletConnect session - ${wcConnection.handshakeTopic} doesn't exsits in app`,
+          `WalletConnect session - ${wcConnection.uri} doesn't exsits in app`,
         );
       }
     });

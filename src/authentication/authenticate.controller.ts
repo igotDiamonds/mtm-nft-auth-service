@@ -2,42 +2,40 @@ import {
   Controller,
   Get,
   HttpStatus,
-  Req,
+  Request,
   Res,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
-import { Response, Request } from 'express';
+import { Response } from 'express';
 import { UserSessionService } from 'src/user-session/user-session.service';
 import { WalletConnectService } from 'src/walletconnect/walletconnect.service';
+import { AuthenticateService } from './authenticate.service';
+import { JwtAuthGuard } from './jwt.guard';
 
 @Controller('authenticate')
 export class AuthenticateController {
   constructor(
     private walletConnectService: WalletConnectService,
     private userSessionService: UserSessionService,
+    private authenticateService: AuthenticateService,
   ) {}
 
   @Get('get-deeplink')
-  async getDeeplink(@Res({ passthrough: true }) res: Response) {
-    const { uri, handshakeTopic } =
-      await this.walletConnectService.createConnection();
+  async getDeeplink() {
+    const { uri } = await this.walletConnectService.createConnection();
 
-    res.cookie('auth-token', handshakeTopic);
-    return uri;
+    const jwt = await this.authenticateService.login(uri);
+
+    return { uri, ...jwt };
   }
 
-  @Get('get-wallet')
-  async getWalletAddress(@Req() req: Request) {
-    return (
-      this.userSessionService.getWalletOf(req.cookies['auth-token']) || false
-    );
-  }
-
+  @UseGuards(JwtAuthGuard)
   @Get('request-session')
-  async requestSession(@Req() req: Request, @Res() res: Response) {
+  async requestSession(@Request() req, @Res() res: Response) {
     try {
-      const token = req.cookies['auth-token'];
-      if (!token) throw new UnauthorizedException();
+      const token = req.user.uri;
+      console.log(token);
 
       await this.walletConnectService.restoreConnection(token);
 

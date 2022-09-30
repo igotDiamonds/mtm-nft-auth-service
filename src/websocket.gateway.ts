@@ -13,16 +13,13 @@ export class WebSocketGateway implements OnGatewayInit {
   afterInit(server: Server) {
     server.on('connection', (socket) => {
       const token = socket.handshake.auth.token;
+      console.log('Socket connection with token: ', token);
 
       if (!token) {
         throw new Error('Token not providen');
       }
 
       socket.join(token);
-
-      console.log(
-        `Socket with id - ${socket.id}  is in rooms - ${socket.rooms}`,
-      );
     });
   }
 }
