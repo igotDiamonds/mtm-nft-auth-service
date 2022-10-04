@@ -16,7 +16,7 @@ export class WebSocketGateway implements OnGatewayInit {
       console.log('Socket connection with token: ', token);
 
       if (!token) {
-        throw new Error('Token not providen');
+        return console.error('Error on socket.afterInit: Token not providen');
       }
 
       socket.join(token);
