@@ -3,7 +3,7 @@ import {
   WebSocketGateway as WSGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
+import { Server } from 'socket.io';
 
 @WSGateway({ cors: true })
 export class WebSocketGateway implements OnGatewayInit {
@@ -20,6 +20,7 @@ export class WebSocketGateway implements OnGatewayInit {
       }
 
       socket.join(token);
+      console.log('Socket.io joined room - ' + token);
     });
   }
 }
