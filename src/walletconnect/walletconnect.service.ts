@@ -92,10 +92,11 @@ export class WalletConnectService {
           ...payload.params[0],
           wcSessionJSON,
         });
+        console.log('Socket.io emit [wc-connected] to: ' + wcConnection.uri);
 
         console.log('WalletConnect, wallet connected successfully');
       } catch (error) {
-        console.log('WalletConnect Connect Event Error: ', error);
+        console.log('WalletConnect, failed to save user session in db', error);
       } finally {
       }
     });
@@ -110,6 +111,7 @@ export class WalletConnectService {
         ...payload.params[0],
         wcSessionJSON,
       });
+      console.log('Socket.io emit [wc-session-update] to: ' + wcConnection.uri);
 
       console.log('WalletConnect - session updated', accounts, chainId);
     });

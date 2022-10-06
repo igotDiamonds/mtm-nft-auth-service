@@ -3,7 +3,7 @@ import {
   WebSocketGateway as WSGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
+import { Server } from 'socket.io';
 
 @WSGateway({ cors: true })
 export class WebSocketGateway implements OnGatewayInit {
@@ -13,13 +13,15 @@ export class WebSocketGateway implements OnGatewayInit {
   afterInit(server: Server) {
     server.on('connection', (socket) => {
       const token = socket.handshake.auth.token;
-      console.log('Socket connection with token: ', token);
 
       if (!token) {
-        return console.error('Error on socket.afterInit: Token not providen');
+        return console.error('Socket.io connection error - no token');
       }
 
+      console.log('Socket.io connected: ', token);
+
       socket.join(token);
+      console.log('Socket.io joined room - ' + token);
     });
   }
 }
