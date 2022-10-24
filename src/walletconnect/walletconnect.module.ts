@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 
 import { UserSessionModule } from 'src/user-session/user-session.module';
-import { WebSocketGateway } from 'src/websocket.gateway';
+import { WebSocketModule } from 'src/websocket.module';
 import { WalletConnectService } from './walletconnect.service';
 
 @Module({
-  imports: [UserSessionModule],
+  imports: [UserSessionModule, WebSocketModule],
   exports: [WalletConnectService],
-  providers: [WalletConnectService, WebSocketGateway],
+  providers: [WalletConnectService],
 })
 export class WalletConnectModule {}
