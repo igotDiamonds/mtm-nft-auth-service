@@ -14,7 +14,7 @@ export class WebSocketGateway implements OnGatewayInit {
 
   afterInit(server: Server) {
     server.on('connection', (socket) => {
-      const token = String(this.jwtService.decode(socket.handshake.auth.token));
+      const token = this.jwtService.decode(socket.handshake.auth.token);
 
       if (!token) {
         return console.error('Socket.io connection error - no token');
@@ -22,7 +22,7 @@ export class WebSocketGateway implements OnGatewayInit {
 
       console.log('Socket.io connected: ', token);
 
-      socket.join(token);
+      socket.join(token as string);
       console.log('Socket.io joined room - ' + token);
     });
   }
