@@ -1,3 +1,4 @@
+import { JwtService } from '@nestjs/jwt';
 import {
   OnGatewayInit,
   WebSocketGateway as WSGateway,
@@ -7,12 +8,13 @@ import { Server } from 'socket.io';
 
 @WSGateway({ cors: true })
 export class WebSocketGateway implements OnGatewayInit {
+  constructor(private jwtService: JwtService) {}
   @WebSocketServer()
   server: Server;
 
   afterInit(server: Server) {
     server.on('connection', (socket) => {
-      const token = socket.handshake.auth.token;
+      const token = String(this.jwtService.decode(socket.handshake.auth.token));
 
       if (!token) {
         return console.error('Socket.io connection error - no token');
