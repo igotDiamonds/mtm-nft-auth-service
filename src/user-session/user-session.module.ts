@@ -4,7 +4,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { jwtConstants } from '../authentication/constants';
 import { UserSessionService } from './user-session.service';
 import { UserSession, UserSessionSchema } from '../schemas/user-session.schema';
-import { WebSocketModule } from 'src/websocket.module';
 
 @Module({
   imports: [

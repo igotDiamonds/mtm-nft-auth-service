@@ -4,7 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { WalletConnectModule } from './walletconnect/walletconnect.module';
 import { AuthenticateModule } from './authentication/authenticate.module';
 import { UserSessionModule } from './user-session/user-session.module';
-import { AuthorizationController } from './authorization/authorization.controller';
+import { AuthorizationModule } from './authorization/authorization.module';
 
 @Module({
   imports: [
@@ -15,7 +15,7 @@ import { AuthorizationController } from './authorization/authorization.controlle
     UserSessionModule,
     AuthenticateModule,
     WalletConnectModule,
+    AuthorizationModule,
   ],
-  controllers: [AuthorizationController],
 })
 export class AppModule {}
