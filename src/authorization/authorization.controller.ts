@@ -1,4 +1,12 @@
-import { Controller, Get, Req, Request, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Req,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
+import { query } from 'express';
 // import { Request } from 'express';
 import { JwtAuthGuard } from 'src/authentication/jwt.guard';
 import { UserSessionService } from 'src/user-session/user-session.service';
@@ -34,5 +42,11 @@ export class AuthorizationController {
     const query = req.query.contracts;
 
     return this.authorizationService.isStreamingAvailable(wallet, query);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('streaming/:wallet')
+  async checkWalletForStreaming(@Param() wallet: string, @Request() req) {
+    return this.authorizationService.isStreamingAvailable(wallet, req.query);
   }
 }

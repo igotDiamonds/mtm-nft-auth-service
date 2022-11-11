@@ -27,9 +27,7 @@ export class AuthorizationService {
     return new Promise<Map<string, Set<string>>>((resolve, reject) => {
       const authorizedNfts = new Map<string, Set<string>>();
 
-      fs.createReadStream(
-        path.resolve('src', 'authorization', 'authorized_nft_list.csv'),
-      )
+      fs.createReadStream(path.resolve(__dirname, 'authorized_nft_list.csv'))
         .pipe(
           csv.parse({
             headers: ['contractAddress', 'tokenId', 'chainId', 'metadata'],
